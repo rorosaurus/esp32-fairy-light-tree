@@ -9,16 +9,21 @@
 #define FREQUENCY 5000
 #define RESOLUTION 12 // 4096 different duty cycles possible
 
-#define MAX_DUTY 1200 // roughly here is where the LEDs appear to max out, any more duty cycle is unneccesary
+#define MAX_DUTY 900 // roughly here is where the LEDs appear to max out, any more duty cycle is unneccesary
+#define STALL_MILLIS 500 // how long to wait after we reach 0 or MAX_DUTY
 
-#define MIN_SPEED 10
+#define MIN_SPEED 5
 #define MAX_SPEED 50
 
 int strip1duty = 0;
 int strip1speed = MIN_SPEED;
+int strip1millis = 0;
+bool strip1paused = false;
 
 int strip2duty = MAX_DUTY;
 int strip2speed = -MIN_SPEED;
+int strip2millis = 0;
+bool strip2paused = false;
 
 void setup() {
   Serial.begin(9600);
@@ -33,32 +38,46 @@ void setup() {
 }
 
 void loop() {
+  delay(20);
+  
 //  Serial.print("strip 1 duty: ");
 //  Serial.println(strip1duty);
   
   // write new PWM
   ledcWrite(STRIP_1_CHANNEL, strip1duty); // changing the LED brightness with PWM
   ledcWrite(STRIP_2_CHANNEL, strip2duty); // changing the LED brightness with PWM
+
+  // unpause
+  if (strip1millis + STALL_MILLIS <= millis()) strip1paused = false;
+  if (strip2millis + STALL_MILLIS <= millis()) strip2paused = false;
   
   // update duty cycles
-  strip1duty += strip1speed;
-  strip2duty += strip2speed;
+  if(!strip1paused) strip1duty += strip1speed;
+  if(!strip2paused) strip2duty += strip2speed;
   
-  if (strip1duty <= 0) {
+  if (strip1duty < 0) {
     strip1duty = 0;
     strip1speed = random(MIN_SPEED, MAX_SPEED);// new positive int
+    strip1paused = true;
+    strip1millis = millis();
   }
-  if (strip2duty <= 0) {
+  if (strip2duty < 0) {
     strip2duty = 0;
     strip2speed = random(MIN_SPEED, MAX_SPEED);// new positive int
+    strip2paused = true;
+    strip2millis = millis();
   }
 
-  if (strip1duty >= MAX_DUTY) {
+  if (strip1duty > MAX_DUTY) {
     strip1duty = MAX_DUTY;
     strip1speed = random(-MIN_SPEED, -MAX_SPEED);// new negative int
+    strip1paused = true;
+    strip1millis = millis();
   }
-  if (strip2duty >= MAX_DUTY) {
+  if (strip2duty > MAX_DUTY) {
     strip2duty = MAX_DUTY;
     strip2speed = random(-MIN_SPEED, -MAX_SPEED);// new negative int
+    strip2paused = true;
+    strip2millis = millis();
   }
 }
