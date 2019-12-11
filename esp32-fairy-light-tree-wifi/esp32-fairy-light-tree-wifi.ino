@@ -66,6 +66,21 @@ void checkForDevices() {
 
 void wifiTaskcode (void * parameter) {
   for(;;) {
+    if (WiFi.status() != WL_CONNECTED) {
+      Serial.println("Reconnecting to WiFi");
+      WiFi.disconnect();
+      WiFi.begin(ssid, password);
+      
+      while (WiFi.status() != WL_CONNECTED) {
+        delay(100);
+        Serial.print(".");
+      }
+
+      Serial.println();
+      Serial.print("WiFi reconnected with ip ");  
+      Serial.println(WiFi.localIP());
+    }
+    
     if (lastWifiCheck + WIFI_CHECK_INTERVAL_MILLIS < millis()) {
       checkForDevices();
     }
