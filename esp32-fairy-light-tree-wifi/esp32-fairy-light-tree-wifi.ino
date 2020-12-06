@@ -7,8 +7,8 @@
 const char* ssid     = "";
 const char* password = "";
 
-const IPAddress strip_1_ip(192, 168, 1, 0);
-const IPAddress strip_2_ip(192, 168, 1, 1);
+const IPAddress strip_1_ip(192, 168, 1, 24);
+const IPAddress strip_2_ip(192, 168, 1, 73);
 
 #define WIFI_CHECK_INTERVAL_MILLIS 300000 // every 5 min
 int lastWifiCheck = -WIFI_CHECK_INTERVAL_MILLIS;
@@ -65,24 +65,32 @@ void checkForDevices() {
 }
 
 void wifiTaskcode (void * parameter) {
-  for(;;) {
-    if (WiFi.status() != WL_CONNECTED) {
+  for(;;) {    
+    if (lastWifiCheck + WIFI_CHECK_INTERVAL_MILLIS < millis()) {
       Serial.println("Reconnecting to WiFi");
-      WiFi.disconnect();
       WiFi.begin(ssid, password);
-      
-      while (WiFi.status() != WL_CONNECTED) {
+
+      long wifiStartMillis = millis();
+      while (WiFi.status() != WL_CONNECTED && // not connected to wifi already AND
+             millis() < wifiStartMillis + 5000) { // we haven't failed to connect for 5 seconds
         delay(100);
         Serial.print(".");
       }
+      
+      if (WiFi.status() != WL_CONNECTED) {
+        Serial.println();
+        Serial.println("Error: failed to connect to wifi!"); 
+      }
+      
+      else {
+        Serial.println();
+        Serial.print("WiFi reconnected with ip ");  
+        Serial.println(WiFi.localIP());
+        
+        checkForDevices();
+      }
 
-      Serial.println();
-      Serial.print("WiFi reconnected with ip ");  
-      Serial.println(WiFi.localIP());
-    }
-    
-    if (lastWifiCheck + WIFI_CHECK_INTERVAL_MILLIS < millis()) {
-      checkForDevices();
+      WiFi.disconnect();
     }
   }
 }
@@ -91,22 +99,6 @@ void setup() {
   Serial.begin(115200);
 
   delay(10);
-
-  // We start by connecting to a WiFi network
-
-  Serial.println();
-  Serial.println("Connecting to WiFi");
-  
-  WiFi.begin(ssid, password);
-  
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(100);
-    Serial.print(".");
-  }
-
-  Serial.println();
-  Serial.print("WiFi connected with ip ");  
-  Serial.println(WiFi.localIP());
 
   xTaskCreatePinnedToCore(
       wifiTaskcode, /* Function to implement the task */
